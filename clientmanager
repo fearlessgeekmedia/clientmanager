@@ -26,19 +26,6 @@ function delete_client {
     fi
 }
 
-function preselect_services {
-    needs="$1"
-    rm -f preselected_services.txt
-    touch preselected_services.txt
-    cat services.txt | while IFS= read -r service; do
-        if grep -q -F -x "$service" <<< "$needs"; then
-            printf 'true\n'
-        else
-            printf 'false\n'
-        fi
-    done >> preselected_services.txt
-}
-
 #Saving clients to a more permanent file
 function save_clients {
     cp "$clients_file" "$1"
@@ -117,44 +104,7 @@ while true; do
                     [[ ! $phone == 0* && ${#phone} == 10 && $phone =~ [0-9]+$ ]] && break;
                     printf "Invalid email\n"
                 done
-
-                # Read the current needs and store them in an array
-        
-                IFS=';' read -ra current_needs <<< "${client_data[3]}"
-
-                
-            
-                # Create a new array to store the updated needs
-                updated_needs=()
-        
-                # Loop through the current needs and use FZF to edit them
-                for need in "${current_needs[@]}"; do
-                    updated_need=$(echo "$need" | fzf --query="$need" --header="Edit the need (use Ctrl+K and Ctrl+J to navigate, Enter to confirm):")
-                    if [ -n "$updated_need" ]; then
-                        updated_needs+=("$updated_need")
-                    fi
-                done
-        
-                # Use FZF to select new needs from services.txt
-                PS3="Select a service to add (0 to finish): "
-                while true; do
-                    selected_service=$(echo -e "${current_needs[*]}\n$(grep -vxF "${current_needs[*]}" services.txt)" | fzf --prompt="Select a service to add (0 to finish): ")
-                    if [[ "$selected_service" == "0" ]]; then
-                        break
-                    elif [[ "$selected_service" ]]; then
-                        if [[ "${updated_needs[@]}" =~ "${selected_service}" ]]; then
-                            printf "Service already selected\n"
-                        else
-                            updated_needs+=("$selected_service")
-                        fi
-                    else
-                        printf "Invalid selection\n"
-                    fi
-                done
-        
-                # Convert the updated needs array to a semicolon-separated string
-                needs=$(IFS=';' ; echo "${updated_needs[*]}")
-
+                read -e -p "Enter new client needs - separated by a semicolon: " -i "${client_data[3]}" needs
                 edit_client "$index" "$name" "$email" "$phone" "$needs"
             fi
             ;;
@@ -168,7 +118,7 @@ while true; do
             clear
             read -p "Enter the file name to save clients: " filename
             save_clients "$filename"
-           ;;
+            ;;
         5)
             # Loading clients from a file
             clear
